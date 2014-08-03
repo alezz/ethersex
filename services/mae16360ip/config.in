@@ -1,0 +1,4 @@
+dep_bool_menu "Mae16360ip" MAE16360IP_SUPPORT
+	comment  "Debugging Flags"
+	dep_bool 'Application Sample Debug' DEBUG_MAE16360IP $DEBUG $MAE16360IP_SUPPORT
+endmenu
