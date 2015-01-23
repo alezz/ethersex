@@ -54,7 +54,7 @@ void fobos_net_handler()
 		uip_connected() ||
 		uip_poll()) {
         if (state->out_len > 0) {
-#ifdef DEBUG_ECMD_NET
+#ifdef DEBUG_FOBOS
             debug_printf("sending %d bytes\n", state->out_len);
 #endif
             uip_send(state->outbuf, state->out_len);
@@ -62,3 +62,9 @@ void fobos_net_handler()
           uip_close();
     }
 }
+
+
+/ *
+  - Ethersex META -
+  net_init(fobos_net_init)
+* /

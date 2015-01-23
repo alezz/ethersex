@@ -35,10 +35,10 @@ void
 show_welcome(void);
 
 void
-send_number(uint16_t number, uint8_t option);
+send_number(uint16_t number0, uint16_t number1);
 
 void
-send_byte(uint8_t byte);
+send_2byte(uint8_t byte0, uint8_t byte1);
 
 uint8_t
 ito7s(uint8_t digit);
@@ -46,20 +46,16 @@ ito7s(uint8_t digit);
 void
 fobos_net_handle(void);
 
-/* disable delay in debug mode */
-#ifdef DEBUG_MAE16360IP
-    #define MAE_DELAY
-#else
-    #include <util/delay.h>
-    #define MAE_DELAY _delay_us(10)
-#endif
+#include <util/delay.h>
+/* #define MAE_DELAY _delay_ms(1) */
+#define MAE_DELAY 
 
 #include "config.h"
 #ifdef DEBUG_MAE16360IP
-    # include "core/debug.h"
-    # define MAE_DEBUG(a...)  debug_printf("mae16360ip: " a)
+# include "core/debug.h"
+# define MAE_DEBUG(a...)  debug_printf("mae16360ip: " a)
 #else
-    # define MAE_DEBUG(a...)
+# define MAE_DEBUG(a...)
 #endif
 
 #endif  /* HAVE_MAE16360IP_H */

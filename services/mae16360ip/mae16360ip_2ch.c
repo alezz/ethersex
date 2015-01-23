@@ -36,9 +36,19 @@
 #include "protocols/uip/uip.h"
 
 uip_conn_t *fobos_conn = NULL;
-#define FOBOS_PORT 1636
 #define FOBOS_BUFFER_LEN 128
 #define FOBOS_VER 0x01
+
+#define MAE_PORT PORTC
+#define MAE_DDR DDRC
+#define MAE_PIN_EN0 (1<<0)
+#define MAE_PIN_CLK0 (1<<1)
+#define MAE_PIN_DATA0 (1<<2)
+#define MAE_PIN_LE0 (1<<3)
+#define MAE_PIN_EN1 (1<<4)
+#define MAE_PIN_CLK1 (1<<5)
+#define MAE_PIN_DATA1 (1<<6)
+#define MAE_PIN_LE1 (1<<7)
 
 struct fobos_buffer
 {
@@ -56,18 +66,18 @@ void
 mae_init(void)
 {
   MAE_DEBUG ("MAE_init\n");
-  DDRC=0b00001111;
-  PORTC=0b00001000;
+  MAE_DDR=0b11111111;
+  MAE_PORT=MAE_PIN_EN0 & MAE_PIN_EN1;
 }
 
 void
 mae_net_init(void)
 {
   MAE_DEBUG ("MAE_NET_init\n");
-  DDRC=0b00001111;  /* i have to set them again here, dont know why */
-  PORTC=0b00001000; /* to have show_ip() to work */
+  MAE_DDR=0b00001111;  /* i have to set this again here, dont know why */
+  MAE_PORT=MAE_PIN_LE0 & MAE_PIN_LE1; /* enable latches and output */
   show_welcome();
-  uip_listen(HTONS(FOBOS_PORT),fobos_net_handle);
+  uip_listen(HTONS(4455),fobos_net_handle);
 }
 
 void
@@ -187,21 +197,22 @@ fobos_newdata(void)
     //    fobos_dimmer = fobos_recv_buffer.data[9];
     
     /* data */
-    PORTC |= 1;
+    MAE_PORT |= MAE_PIN_EN0 & MAE_PIN_EN1;
     uint8_t i;
-    uint16_t value;
-    for (i=41; i>9;i-=2)
+    uint16_t value0, value1;
+    for (i=41; i>9;i-=4)
     {
-      value = (((uint16_t)fobos_recv_buffer.data[i-1])<<8) + fobos_recv_buffer.data[i];
-      send_number(value,fobos_option);
+      value0 = (((uint16_t)fobos_recv_buffer.data[i-1])<<8) + fobos_recv_buffer.data[i-0];
+      value1 = (((uint16_t)fobos_recv_buffer.data[i-3])<<8) + fobos_recv_buffer.data[i-2];
+      send_number(value0, value1);
     }
-    PORTC &=~ 1;
+    MAE_PORT &=~ (MAE_PIN_EN0 & MAE_PIN_EN1);
     uip_send("ok\n",3);
   }
 }
 
 void
-send_number(uint16_t number, uint8_t option)
+send_number(uint16_t number0, uint16_t number1)
 {
   MAE_DEBUG("send_number: %d\n",number);
   uint8_t c,d;
@@ -243,24 +254,24 @@ show_welcome(void)
   for (uint8_t i=0;i<16;i++)
   {
     if (i== 6) {
-      send_byte(0b01101110);
-      send_byte(0b01111011);
       send_byte(0b00111111);
+      send_byte(0b01111011);
+      send_byte(0b01101110);
     }
     else if (i==4) {
-      send_byte(0b01101110);
-      send_byte(0);
       send_byte(0b01101101);
+      send_byte(0);
+      send_byte(0b01101110);
     }
     else if (i==2) {
-      send_byte(0b00011000);
-      send_byte(0b01101111);
       send_byte(0b01111011);
+      send_byte(0b01101111);
+      send_byte(0b00011000);
     }
     else if (i==0) {
-      send_byte(0b00111100);
-      send_byte(0b01000000);
       send_byte(0b11111011);
+      send_byte(0b01000000);
+      send_byte(0b00111100);
     }
     else if (i==15) send_number(ip[0],4);
     else if (i==13) send_number(ip[1],4);
@@ -276,20 +287,29 @@ show_welcome(void)
 }
 
 void
-send_byte(uint8_t byte)
+send_2byte(uint8_t byte0, uint8_t byte1)
 {
   for (uint8_t i =0; i<8;i++)
   {
-    if ((byte & 1)==1)
-      PORTC|=(1<<2);
+    /* prepare data bit */
+    if ((byte0 & 1)==1)
+      MAE_PORT|=MAE_PIN_DATA0;
     else
-      PORTC&=~(1<<2);
+      MAE_PORT&=~MAE_PIN_DATA0;
+    if ((byte1 & 1)==1)
+      MAE_PORT|=MAE_PIN_DATA1;
+    else
+      MAE_PORT&=~MAE_PIN_DATA1;
     MAE_DELAY;
-    PORTC|=(1<<1);
+    /* clock rise */
+    MAE_PORT|=MAE_PIN_CLK0 & MAE_PIN_CLK1;
     MAE_DELAY;
-    PORTC&=~(1<<1);
+    /* clock fall */
+    MAE_PORT&=~(MAE_PIN_CLK0 & MAE_PIN_CLK1);
     MAE_DELAY;
-    byte=byte>>1;
+    /* next */
+    byte0=byte0>>1;
+    byte1=byte1>>1;
   }
 }
 
