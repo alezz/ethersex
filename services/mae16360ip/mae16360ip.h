@@ -46,6 +46,9 @@ ito7s(uint8_t digit);
 void
 fobos_net_handle(void);
 
+void
+mae_timer(void);
+
 /* disable delay in debug mode */
 #ifdef DEBUG_MAE16360IP
     #define MAE_DELAY

@@ -51,22 +51,35 @@ struct fobos_buffer
 struct fobos_buffer fobos_recv_buffer;
 
 uint8_t fobos_option;
+enum { FOBOS_OPT_DASHES = 0, FOBOS_OPT_NOTIFY_ALSO_DEC=1, FOBOS_OPT_3RDDOT=2, FOBOS_OPT_EXPLICIT_ZERO_GREEN=3,
+  FOBOS_OPT_EXPLICIT_ZERO_RED=4, FOBOS_OPT_NOBLINK=5, FOBOS_OPT_NOBEEP=6, FOBOS_OPT_BLINKBEEP_ALSO_GREEN=7 };
+uint16_t mae_numbers[16]; /* contain a copy of the values, to make comparisons */
+uint8_t mae_blink[16];  /* counters for blinking, if > 0 that number should blink */
+uint8_t mae_beep;  /* counter for beeping, if > 0 i should beep */
+
+#define MAE_BLINK_LOOPS 5     /* how many times to blink */
+#define MAE_BEEP_LOOPS 2    /* how many times to beep */
 
 void
 mae_init(void)
 {
   MAE_DEBUG ("MAE_init\n");
-  DDRC=0b00001111;
+  DDRC=0b00011111;
   PORTC=0b00001000;
+  DDRA|=(1<<7);
+  PORTA&=~(1<<7);
+  for (uint8_t i=0; i<16; i++)
+  {
+    mae_numbers[i]=0;
+    mae_blink[i]=0;
+  }
+  mae_beep=0;
 }
 
 void
 mae_net_init(void)
 {
   MAE_DEBUG ("MAE_NET_init\n");
-  DDRC=0b00001111;  /* i have to set them again here, dont know why */
-  PORTC=0b00001000; /* to have show_ip() to work */
-  show_welcome();
   uip_listen(HTONS(FOBOS_PORT),fobos_net_handle);
 }
 
@@ -118,14 +131,6 @@ fobos_net_handle(void)
     MAE_DEBUG ("data: %s END\n",fobos_recv_buffer.data);
     MAE_DEBUG ("lenght: %d\n",fobos_recv_buffer.len);
     fobos_newdata();
-    /*
-    if (uip_len <= YPORT_BUFFER_LEN ) &&
-        yport_rxstart(uip_appdata, uip_len) != 0)
-    {*/
-      /* prevent the other side from sending more data via tcp */
-      /*uip_stop();
-    }
-    */
   }
 
   /* retransmit last packet */
@@ -184,16 +189,48 @@ fobos_newdata(void)
       return;
     }
     fobos_option = fobos_recv_buffer.data[8];
-    //    fobos_dimmer = fobos_recv_buffer.data[9];
+    //    fobos_dimmer = fobos_recv_buffer.data[9];   /* not implemented by now */
     
     /* data */
-    PORTC |= 1;
-    uint8_t i;
+    uint8_t i, q;
     uint16_t value;
-    for (i=41; i>9;i-=2)
+    
+    // firstly, check if something has changed or not
+    
+    for (i=0, q=41; i<16;i++, q-=2)
     {
-      value = (((uint16_t)fobos_recv_buffer.data[i-1])<<8) + fobos_recv_buffer.data[i];
-      send_number(value,fobos_option);
+      value = (((uint16_t)fobos_recv_buffer.data[q-1])<<8) + fobos_recv_buffer.data[q];
+      if (value!=mae_numbers[i]) 
+      {
+        /* blink notification */
+        if (!(fobos_option & (1<<FOBOS_OPT_NOBLINK)))   /* if blink has not been disabled */
+          if ((!(i&1))||(fobos_option&(1<<FOBOS_OPT_BLINKBEEP_ALSO_GREEN)))  /* if red or also green */
+            if ((fobos_option & (1<<FOBOS_OPT_NOTIFY_ALSO_DEC)) || (value>mae_numbers[i]) )  /* if inc or also dec */
+              mae_blink[i]=MAE_BLINK_LOOPS*2;
+        /* beep notification */
+        if (!(fobos_option & (1<<FOBOS_OPT_NOBEEP)))  /* if beep has not been disabled */
+          if ((!(i&1))||(fobos_option&(1<<FOBOS_OPT_BLINKBEEP_ALSO_GREEN)))  /* if red or also green */
+            if ((fobos_option & (1<<FOBOS_OPT_NOTIFY_ALSO_DEC)) || (value>mae_numbers[i]) )  /* if inc or also dec */
+              mae_beep=MAE_BEEP_LOOPS*2;
+        /* change */
+        mae_numbers[i]=value;
+      }
+    }
+    
+    PORTC |= 1;
+    for (i=0; i<16;i++)
+    {
+      if ((mae_numbers[i]==0) && (
+        ((!(fobos_option&(1<<FOBOS_OPT_EXPLICIT_ZERO_GREEN))) && (i&1))||
+        ((!(fobos_option&(1<<FOBOS_OPT_EXPLICIT_ZERO_RED))) && (!(i&1)))
+        ))
+      {
+        send_byte((fobos_option&(1<<FOBOS_OPT_3RDDOT)) <<5);
+        send_byte(0);
+        send_byte(0);
+      }
+      else
+        send_number(mae_numbers[i],fobos_option);
     }
     PORTC &=~ 1;
     uip_send("ok\n",3);
@@ -205,28 +242,30 @@ send_number(uint16_t number, uint8_t option)
 {
   MAE_DEBUG("send_number: %d\n",number);
   uint8_t c,d;
-  if ((number==0)&&(option & (1<<0)))
+  if ((number==0)&&(option & (1<<FOBOS_OPT_DASHES)))
     {
-      send_byte(ito7s(0x10)+( (option&(1<<2)) <<5) );
+      /* show "---" */
+      send_byte(ito7s(0x10)+( (option&(1<<FOBOS_OPT_3RDDOT)) <<5) );
       send_byte(ito7s(0x10));
       send_byte(ito7s(0x10));
     }
-    else if ((number==0) && (!(option & (1<<1))))
+  else if (number==0) 
     {
-      send_byte(ito7s(0)+( (option&(1<<2)) <<5) );
+      /* show "  0" */
+      send_byte(ito7s(0)+( (option&(1<<FOBOS_OPT_3RDDOT)) <<5) );
       send_byte(0);
       send_byte(0);
     }
-    else
+  else
     {
       c=number/100;
       d=(number-(c*100))/10;
-      send_byte(ito7s(number-(c*100)-(d*10))+( (option&(1<<2)) <<5) );
-      if ((c==0) && (d==0) && (!(option & (1<<1))))
+      send_byte(ito7s(number-(c*100)-(d*10))+( (option&(1<<FOBOS_OPT_3RDDOT)) <<5) );
+      if ((c==0) && (d==0))
         send_byte(0);
       else
         send_byte(ito7s(d));
-      if ((c==0) && (!(option & (1<<1))))
+      if (c==0)
         send_byte(0);
       else
         send_byte(ito7s(c));
@@ -262,9 +301,9 @@ show_welcome(void)
       send_byte(0b01000000);
       send_byte(0b11111011);
     }
-    else if (i==15) send_number(ip[0],4);
-    else if (i==13) send_number(ip[1],4);
-    else if (i==11) send_number(ip[2],4);
+    else if (i==15) send_number(ip[0],1<<FOBOS_OPT_3RDDOT);
+    else if (i==13) send_number(ip[1],1<<FOBOS_OPT_3RDDOT);
+    else if (i==11) send_number(ip[2],1<<FOBOS_OPT_3RDDOT);
     else if (i==9) send_number(ip[3],0);
     else {
       send_byte(0);
@@ -319,9 +358,51 @@ ito7s(uint8_t digit)
   }
 }
 
+void
+mae_timer(void)
+{
+  MAE_DEBUG ("tick\n");
+  /* called every 25*20ms = 0.5s - ethersex does the timing */
+  uint8_t i;
+  uint8_t flag=0;
+  if (mae_beep>0)
+  {
+    if (mae_beep & 1) PORTA&=~(1<<7);
+    else PORTA |= (1<<7);
+    mae_beep--;
+  }
+  for (i=0; i<16;i++)
+  {
+    if (mae_blink[i]>0)
+    {
+      flag=1;
+      mae_blink[i]--;
+    }
+  }
+  if (flag) /* refresh only if have to blink */
+  {
+    PORTC |= 1;
+    for (i=0; i<16;i++)
+    {
+      if (mae_blink[i]&1)  /*odd*/
+        {
+          send_byte(0);
+          send_byte(0);
+          send_byte(0);
+        }
+      else      /*even or zero*/
+        send_number(mae_numbers[i],fobos_option);
+    }
+    PORTC &=~ 1;
+  }  
+  
+}
+
 /*
   -- Ethersex META --
   header(services/mae16360ip/mae16360ip.h)
   init(mae_init)
   net_init(mae_net_init)
+  startup(show_welcome)
+  timer(25,mae_timer())
 */
