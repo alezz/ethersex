@@ -1,0 +1,7 @@
+mainmenu_option next_comment
+
+  comment "RFID"
+
+  source hardware/rfid/inout/config.in
+
+endmenu

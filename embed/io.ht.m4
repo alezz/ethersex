@@ -57,7 +57,11 @@ function mask_port(request, data) {
 }
 
 function generate_port(port, change_handler) {
-	var name = String.fromCharCode(port + 65);
+	if (port > 7) {
+		var name = String.fromCharCode(port + 66);
+	} else {
+		var name = String.fromCharCode(port + 65);
+	}
 	document.write('<table class="iotable"><tr><th>Nr</th><th>DDR' + name
 		       + '</th><th>PORT' + name + '</th><th>PIN' + name + '</th></tr>');
 	for (var i = 0; i < 8; i++) {
@@ -109,6 +113,15 @@ function port_change(obj) {
 		<td><script type="text/javascript">generate_port(1, "port_change(this)");</script></td>
 		<td><script type="text/javascript">generate_port(2, "port_change(this)");</script></td>
 		<td><script type="text/javascript">generate_port(3, "port_change(this)");</script></td>
+		<td><script type="text/javascript">generate_port(4, "port_change(this)");</script></td>
+		<td><script type="text/javascript">generate_port(5, "port_change(this)");</script></td>
+	</tr>
+	<tr>
+		<td><script type="text/javascript">generate_port(6, "port_change(this)");</script></td>
+		<td><script type="text/javascript">generate_port(7, "port_change(this)");</script></td>
+		<td><script type="text/javascript">generate_port(8, "port_change(this)");</script></td>
+		<td><script type="text/javascript">generate_port(9, "port_change(this)");</script></td>
+		<td><script type="text/javascript">generate_port(10, "port_change(this)");</script></td>
 	</tr>
 </table>
 </center>
