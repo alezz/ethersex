@@ -50,11 +50,11 @@ inout_triso_init(void)
    rfid_configure_pcint();
   
   //should not be needed
-  DDR_CONFIG_IN(INOUT_TRISO_STROBE); 
+  DDR_CONFIG_IN(INOUT_TRISO_STROBE); /*pcint18*/
   DDR_CONFIG_IN(INOUT_TRISO_DATA);
-  DDR_CONFIG_IN(INOUT_TRISO_PRES);
+  DDR_CONFIG_IN(INOUT_TRISO_PRES);  /*pcint20*/
   
-  bitcount = 9;
+  bitcount = 8;
   data = 0;
   digit = 0;
   parity = 1;
@@ -64,41 +64,52 @@ inout_triso_init(void)
 
 ISR(RFID_VECTOR)
 {
-	INOUT_DEBUG ("ISR - tag present change\n");
-	if ( ! PIN_HIGH(INOUT_TRISO_PRES)) {
-		INOUT_DEBUG (" - tag present LOW\n");
-		bitcount = 9;
+	if (PIN_HIGH(INOUT_TRISO_PRES))
+	{
+		/* no "tag presence" -> reset all */
+		bitcount = 8;
+ 	    data = 0;
 		digit = 0;
-		data = 0;
-		while ((!PIN_HIGH(INOUT_TRISO_PRES)) && digit < 16)
-		{
-			while (PIN_HIGH(INOUT_TRISO_STROBE));	/*wait for clock to go low */
-			if (!PIN_HIGH(INOUT_TRISO_DATA)) data |= 0x10;	/* sample DATA */
-			if (--bitcount  == 0)
+		parity = 1;
+	}
+	else
+	{
+	//INOUT_DEBUG ("ISR - strobe change\n");
+		if ( ! PIN_HIGH(INOUT_TRISO_STROBE) ) {
+			//INOUT_DEBUG (" - strobe LOW\n");
+			//while ((!PIN_HIGH(INOUT_TRISO_PRES)) && digit < 16)
 			{
-				if (digit++ > 0)
+				if (!PIN_HIGH(INOUT_TRISO_DATA)) data |= 0x10;	/* sample DATA */
+				bitcount--;										/* next bit  */
+				if (bitcount  == 0)								/* last bit */
 				{
-					/* if parity check */
-					buffer[digit] = data & 0xF;  	   		    /* store data bits, go to next digit */
-					bitcount = 4;									/* 4 data bits + 1 parity bit */
-					INOUT_DEBUG ("data (%d): %x\n", digit, data);
+					bitcount = 5;
+					if (digit == 16)
+					{
+						/* LCR check */
+						INOUT_DEBUG ("RFID finished, LCR: %x\n", data);
+						digit = 0;
+						bitcount = 8;
+					} 
+					else
+					{
+						if (digit > 0)
+						{
+							/* if parity check */
+							//buffer[digit] = data & 0xF;  	   		    /* store data bits */
+							//INOUT_DEBUG ("data (%d): %x par %d\n", digit, data & 0xF, ((data & 0x10) == 0x10)?1:0);
+							INOUT_DEBUG ("data (%d): %x\n", digit, data );
+						}
+						else
+						{
+							INOUT_DEBUG ("got preamble, we hope\n");	/* preamble is not checked */
+						}
+						digit++;
+					}
 					data = 0;
 				}
-				else
-					INOUT_DEBUG ("got preamble, we hope\n");	/* preamble is not checked */
-				if (digit == 16)
-				{
-					/* LCR check */
-					INOUT_DEBUG ("RFID finished, data: %s\n", buffer);
-					digit = 0;
-					bitcount = 9;
-				}
+				data >>= 1;									    /* shift bits */
 			}
-			else
-			{
-				data >>= 1;									/* shift bits */
-			}
-			while (!PIN_HIGH(INOUT_TRISO_STROBE));	/*wait for clock to return hi */
 		}
 	}
 }

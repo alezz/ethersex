@@ -228,13 +228,15 @@ pin(PS21, $2, INPUT)
 #define PS2_VECTOR INT$1`_vect'
 ')
 
-define(`RFID_USE_PCINT', `dnl
-/* RFID PinChange-Interrupt Line  PCINT$1 -> $2 */
+define(`RFID_USE_PCINT_STROBE_PRES', `dnl
+/* RFID PinChange-Interrupt Line  PCINT$1 for Strobe and PCINT$2 for tagPresence */
 /* alez@maetech.it */
 dnl Configure pin-change-mask to monitor PCINTn and enable interrupt
 #define rfid_configure_pcint() \
   _paste(PCMSK, eval($1/8)) |= _BV(PCINT$1); \
-  PCICR  |= _BV(_paste(PCIE, eval($1/8)));
+  PCICR  |= _BV(_paste(PCIE, eval($1/8))); \
+  _paste(PCMSK, eval($2/8)) |= _BV(PCINT$2); \
+  PCICR  |= _BV(_paste(PCIE, eval($2/8)));
 
 #define RFID_VECTOR _paste3(PCINT, eval($1/8), _vect)
 ')

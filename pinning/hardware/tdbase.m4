@@ -41,9 +41,12 @@ ifdef(`conf_HD44780_BACKLIGHT', `
   pin(HD44780_BL, PE3, OUTPUT)
 ')
 
+/* hardware/rfid/inout/triso.c */
+/* Strobe and Presence PCINT must be same PCIx */
+
 ifdef(`conf_INOUT_TRISO', `dnl
 pin(INOUT_TRISO_STROBE, PK2, INPUT)
 pin(INOUT_TRISO_DATA, PK3, INPUT)
 pin(INOUT_TRISO_PRES, PK4, INPUT)
-RFID_USE_PCINT(20)
+RFID_USE_PCINT_STROBE_PRES(18,20)
 ')dnl
