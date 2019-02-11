@@ -77,6 +77,8 @@ mainmenu_option next_comment
     dep_bool "Backlight on at power-on" HD44780_BACKLIGHT_POWERON $HD44780_SUPPORT $HD44780_BACKLIGHT_SUPPORT
     dep_bool "Invert Backlight switch" HD44780_BACKLIGHT_INV $HD44780_SUPPORT $HD44780_BACKLIGHT_SUPPORT
 
+    dep_bool "MCP41xxx contrast control" HD44780_MCP_SUPPORT $HD44780_SUPPORT
+
     if [ "$HD44780_BACKLIGHT_SUPPORT" = "y" -a "$HD44780_MULTIEN_SUPPORT" = "y" ]; then
       define_bool HD44780_MULTIEN_BACKLIGHT_SUPPORT y
     fi

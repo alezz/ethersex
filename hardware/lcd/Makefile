@@ -9,6 +9,8 @@ $(HD44780_2WIRE)_SRC              += hardware/lcd/hd44780_2wire.c
 $(HD44780_SUPPORT)_ECMD_SRC       += hardware/lcd/lcd_ecmd.c
 $(HD44780_CHARCONV_SUPPORT)_SRC   += hardware/lcd/hd44780_charconv.c
 
+$(HD44780_MCP_SUPPORT)_SRC += hardware/lcd/contrast_mcp41xxx.c
+
 $(HR20_LCD_SUPPORT_FULL)_SRC      += hardware/lcd/hr20.c
 $(HR20_LCD_SUPPORT_FULL)_ECMD_SRC += hardware/lcd/hr20-ecmd.c
 

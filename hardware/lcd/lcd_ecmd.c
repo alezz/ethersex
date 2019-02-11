@@ -4,6 +4,9 @@
  * Copyright (c) 2007 by Stefan Siegl <stesie@brokenpipe.de>
  * Copyright (c) 2007 by Christian Dietrich <stettberger@dokucode.de>
  * Copyright (c) 2016 Michael Brakemeier <michael@brakemeier.de>
+ * Copyright (c) 2018 by Enrico Giacomazzi <enrico@giacomazzi.cc>
+ * Copyright (c) 2018 by HyperWare Solutions snc <info@hyperware.io>
+ * Copyright (c) 2018 by Alessandro Mauro <alez@maetech.it>
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License (either version 2 or
@@ -282,6 +285,19 @@ parse_cmd_lcd_print_charset(char *cmd, char *output, uint16_t len)
 }
 #endif
 
+#ifdef HD44780_MCP_SUPPORT
+int16_t parse_cmd_lcd_contrast(char *cmd, char *output, uint16_t len)
+{
+	if(strlen(cmd) < 1)
+		return ECMD_FINAL(snprintf_P(output, len, PSTR("contrast is %d") , contrast_get() ));
+	uint8_t value;
+	int ret = sscanf_P(cmd, PSTR("%u"), &value);
+	if(!ret) return ECMD_ERR_PARSE_ERROR;
+	contrast_set(LO8(value));
+	return ECMD_FINAL_OK;
+}
+#endif
+
 /*
   -- Ethersex META --
   block(HD44780 [[LCD]])
@@ -299,5 +315,8 @@ parse_cmd_lcd_print_charset(char *cmd, char *output, uint16_t len)
   ecmd_endif()
   ecmd_ifdef(DEBUG_HD44780_CHARCONV)
     ecmd_feature(lcd_print_charset, "lcd print charset", FROM TO, Print char FROM up to char TO)
+  ecmd_endif()
+  ecmd_ifdef(HD44780_MCP_SUPPORT)
+    ecmd_feature(lcd_contrast, "lcd contrast", [STATE], get or set the amount of the lcd contrast)
   ecmd_endif()
 */
