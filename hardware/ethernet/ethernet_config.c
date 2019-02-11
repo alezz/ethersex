@@ -48,7 +48,20 @@ network_config_load (void)
 #endif
 #endif
 
-#if (defined(IPV4_SUPPORT) && !defined(BOOTP_SUPPORT) && !defined(DHCP_SUPPORT)) || defined(IPV6_STATIC_SUPPORT)
+  /* load dhcp settings from eeprom */
+  /* dhcp module will do it again so decides autonomously */
+  /* but if dhcp is enabled we shall not load static IP */
+#ifdef DHCP_SUPPORT
+  uint8_t dhcp_en;
+  #ifdef EEPROM_SUPPORT
+    eeprom_restore_char(dhcp_enabled, &dhcp_en);
+  #else
+    dhcp_en = 0;
+  #endif
+#endif
+
+//#if (defined(IPV4_SUPPORT) && !defined(BOOTP_SUPPORT) && !defined(DHCP_SUPPORT)) || defined(IPV6_STATIC_SUPPORT)
+#if (defined(IPV4_SUPPORT) && !defined(BOOTP_SUPPORT) ) || defined(IPV6_STATIC_SUPPORT)
   uip_ipaddr_t ip;
 
   /* Configure the IP address. */
@@ -57,6 +70,11 @@ network_config_load (void)
   eeprom_restore_ip (ip, &ip);
 #else
   set_CONF_ETHERSEX_IP (&ip);
+#endif
+
+#ifdef DHCP_SUPPORT
+  debug_printf("eth_config dhcp=%u\n", dhcp_en);
+  if (!dhcp_en)
 #endif
   uip_sethostaddr (&ip);
 
@@ -73,6 +91,9 @@ network_config_load (void)
 #else
   set_CONF_ETHERSEX_IP4_NETMASK (&ip);
 #endif
+#ifdef DHCP_SUPPORT
+  if (!dhcp_en)
+#endif
   uip_setnetmask (&ip);
 #endif /* IPV4_SUPPORT */
 
@@ -82,6 +103,9 @@ network_config_load (void)
   eeprom_restore_ip (gateway, &ip);
 #else
   set_CONF_ETHERSEX_GATEWAY (&ip);
+#endif
+#ifdef DHCP_SUPPORT
+  if (!dhcp_en)
 #endif
   uip_setdraddr (&ip);
 #endif /* No autoconfiguration. */
