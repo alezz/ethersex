@@ -16,7 +16,7 @@ dep_bool_menu "VFS (Virtual File System) support" VFS_SUPPORT
     dep_bool "Inline IO" VFS_IO_INLINE_SUPPORT $VFS_INLINE_SUPPORT
     dep_bool "Inline KTY" KTY_INLINE_SUPPORT $VFS_INLINE_SUPPORT $KTY_SUPPORT
     dep_bool "Inline ADC" ADC_INLINE_SUPPORT $VFS_INLINE_SUPPORT $ADC_SUPPORT
-    dep_bool "Inline OneWire" ONEWIRE_INLINE_SUPPORT $VFS_INLINE_SUPPORT $ONEWIRE_SUPPORT
+    dep_bool "Inline OneWire" ONEWIRE_INLINE_SUPPORT $VFS_INLINE_SUPPORT $ONEWIRE_ECMD_LIST_SUPPORT $ONEWIRE_DS18XX_SUPPORT
     if [ "$DHT_SUPPORT" = "y" -o "$SHT_SUPPORT" = "y" ]; then
       dep_bool "Inline humidity & temperature sensors" HAT_INLINE_SUPPORT $VFS_INLINE_SUPPORT
     else
@@ -41,7 +41,7 @@ dep_bool_menu "VFS (Virtual File System) support" VFS_SUPPORT
     dep_bool "Support Inline SVG" VFS_INLINE_INLINESVG_SUPPORT $VFS_INLINE_SUPPORT
     dep_bool "Support <input type=range> for Firefox" VFS_INLINE_HTML5_RANGE_FF_SUPPORT $VFS_INLINE_SUPPORT
     dep_bool "Optimize sizes when inlining" VFS_INLINE_HTML_CLEAN_SUPPORT $VFS_INLINE_SUPPORT
-    dep_bool "Suport obsolete browsers" VFS_INLINE_OBSOLETE_BROWSER_SUPPORT $VFS_INLINE_SUPPORT
+    dep_bool "Support obsolete browsers" VFS_INLINE_OBSOLETE_BROWSER_SUPPORT $VFS_INLINE_SUPPORT
 
     comment  "Debugging Flags"
     dep_bool 'Keep dummy files' DEBUG_INLINE_DUMMY $VFS_INLINE_SUPPORT $DEBUG

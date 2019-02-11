@@ -20,6 +20,9 @@
  * http://www.gnu.org/copyleft/gpl.html
  */
 
+#include <stdlib.h>
+#include <stdio.h>
+
 #include "config.h"
 #include "core/debug.h"
 #include "core/bit-macros.h"
@@ -117,7 +120,8 @@ bsbport_poll_cb(void)
 
 void
 bsbport_publish_cb(char const *topic, uint16_t topic_length,
-                   const void *payload, uint16_t payload_length)
+                   const void *payload, uint16_t payload_length,
+                   bool retained)
 {
   BSBDEBUG("MQTT Publish: %s", topic);
   if (topic_length < 20)
@@ -135,6 +139,9 @@ bsbport_publish_cb(char const *topic, uint16_t topic_length,
   if (topic[sizeof(BSBPORT_MQTT_TOPIC)] == 's')
   {
     char *strvalue = malloc(payload_length + 1);
+    if (strvalue == NULL)
+      return;
+
     ret =
       sscanf_P(topic, PSTR(BSBPORT_SUBSCRIBE_SET_FORMAT), &dest, &p1, &p2,
                &p3, &p4, type);
@@ -194,6 +201,8 @@ bsbport_publish_cb(char const *topic, uint16_t topic_length,
     }
     else
       BSBDEBUG("MQTT set parse error");
+
+    free(strvalue);
   }
   if (topic[sizeof(BSBPORT_MQTT_TOPIC)] == 'q')
   {

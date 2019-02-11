@@ -28,6 +28,7 @@ if [ "$ARCH_AVR" = "y" ]; then
 		 ATmega169    atmega169		\
 		 ATmega32     atmega32		\
 		 ATmega328p   atmega328p	\
+		 ATmega32u4   atmega32u4	\
 		 ATmega64     atmega64		\
 		 ATmega644    atmega644		\
 		 ATmega644p   atmega644p	\
@@ -168,6 +169,7 @@ fi
 		elif [ "$SOFT_UART_SUPPORT" = y ]; then
 			int "Software-UART Baudrate" DEBUG_BAUDRATE 19200
 		fi
+		dep_bool 'Watchdog in debug mode' DEBUG_USE_WATCHDOG $DEBUG
 		comment  'Debugging Flags'
 		dep_bool 'Hooks' DEBUG_HOOK $DEBUG
 		dep_bool 'Reset Reason' DEBUG_RESET_REASON $DEBUG

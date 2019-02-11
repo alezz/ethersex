@@ -1,5 +1,5 @@
 dnl
-dnl meduino.m4
+dnl arduino_mega2560_r3.m4
 dnl
 dnl   Copyright (c) 2016 by Erik Kunze <ethersex@erik-kunze.de>
 dnl  
