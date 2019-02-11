@@ -22,6 +22,7 @@
 
 #include "config.h"
 #include "core/bit-macros.h"
+#include "core/eeprom.h"
 #include "protocols/uip/uip.h"
 #include "protocols/uip/uip_router.h"
 #include "protocols/dns/resolv.h"
@@ -29,11 +30,14 @@
 #include "ntp.h"
 #include "ntpd_net.h"
 
+#include "protocols/uip/parse.h"
+#include "core/eeprom.h"
+
 #ifdef DEBUG_NTP
-#include "core/debug.h"
-#define NTPDEBUG(...)  debug_printf("ntp: " __VA_ARGS__)
+  #include "core/debug.h"
+  #define NTPDEBUG(...)  debug_printf("ntp: " __VA_ARGS__)
 #else
-#define NTPDEBUG(...)
+  #define NTPDEBUG(...)
 #endif /* DEBUG_NTP */
 
 static uip_udp_conn_t *ntp_conn = NULL;
@@ -53,9 +57,22 @@ ntp_dns_query_cb(char *name, uip_ipaddr_t * ipaddr)
 void
 ntp_conf(uip_ipaddr_t * ntpserver)
 {
+  uint8_t *casted_ip = (uint8_t *) ntpserver;
+  if(casted_ip[0] == 0x00 && casted_ip[1] == 0x00 && casted_ip[2] == 0x00 && casted_ip[3] == 0x00)
+    return;
+
   if (ntp_conn != NULL)
     uip_udp_remove(ntp_conn);
-  ntp_conn = uip_udp_new(ntpserver, HTONS(NTP_PORT), ntp_newdata);
+
+  if((casted_ip[0] == 0xFF && casted_ip[1] == 0xFF && casted_ip[2] == 0xFF && casted_ip[3] == 0xFF) ||
+    (casted_ip[0] == 0x00 && casted_ip[1] == 0x00 && casted_ip[2] == 0x00 && casted_ip[3] == 0x00)){
+      NTPDEBUG("INVALID NTP IP\n");
+    }
+
+  ntp_conn = uip_udp_new(ntpserver, HTONS(NTP_PORT), *ntp_newdata);
+
+  debug_ip("new ntp server",ntpserver);
+
 }
 
 uip_ipaddr_t *
@@ -78,16 +95,43 @@ ntp_init()
   if (ntp_conn != NULL || !(ipaddr = resolv_lookup(NTP_SERVER)))
     resolv_query(NTP_SERVER, ntp_dns_query_cb);
   else
-    ntp_conf(ipaddr);
+  {
+    eeprom_restore_ip(ntp_server, &ipaddr);
+    uint8_t *casted = (uint8_t *) ipaddr;
 
+    if(casted[0] == 0xFF && casted[1] == 0xFF && casted[2] == 0xFF && casted[3] == 0xFF)
+    {
+      set_NTP_SERVER_IP(&ipaddr);
+      eeprom_save(ntp_server, &ipaddr, IPADDR_LEN);
+    }
+
+    ntp_conf(ipaddr);
+  }
+    
 #else /* ! DNS_SUPPORT */
+NTPDEBUG("NTP_INIT: WITHOUT DNS SUPPORT\n");
+
   uip_ipaddr_t ip;
-  set_NTP_SERVER_IP(&ip);
+  eeprom_restore_ip(ntp_server, &ip);
+
+  uint8_t *casted = (uint8_t *) ip;
+
+  if(casted[0] == 0xFF && casted[1] == 0xFF && casted[2] == 0xFF && casted[3] == 0xFF)
+  {
+    set_NTP_SERVER_IP(&ip);
+    eeprom_save(ntp_server, &ip, IPADDR_LEN);
+  }
+
 
   ntp_conf(&ip);
 #endif
 }
 
+void debug_ip(char * msg, uip_ipaddr_t * ip)
+{
+  uint8_t *casted = (uint8_t *) ip;
+  NTPDEBUG("%s --> %u.%u.%u.%u\n", msg, casted[0],casted[1],casted[2],casted[3]);
+}
 
 void
 ntp_send_packet(void)
@@ -107,6 +151,11 @@ ntp_send_packet(void)
     NTPDEBUG("ntp_send_packet: skip send, ntp not initialized\n");
     return;
   }
+
+  uint8_t *ip = (uint8_t *) ntp_conn->ripaddr;
+
+  NTPDEBUG("NTP REQUEST SENDED FROM IP: %u.%u.%u.%u\n", ip[0],ip[1],ip[2],ip[3]);
+
 
   /* LLH len defined in UIP depending on stacks (i.e. 14 for ethernet frame),
    * may be already suitable for tunneling! */

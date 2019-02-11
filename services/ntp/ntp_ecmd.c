@@ -25,6 +25,7 @@
 
 #include "config.h"
 #include "core/debug.h"
+#include "core/eeprom.h"
 #include "protocols/uip/uip.h"
 #include "protocols/uip/parse.h"
 #include "protocols/dns/resolv.h"
@@ -42,26 +43,28 @@ int16_t parse_cmd_ntp_server(char *cmd, char *output, uint16_t len)
 
     if (*cmd != '\0') {
 	/* try to parse ip */
-	if (parse_ip(cmd, &ntpaddr) != 0) {
-#ifdef DNS_SUPPORT
-	    uip_ipaddr_t *ip;
+	if (parse_ip(cmd, &ntpaddr))
+		return ECMD_ERR_PARSE_ERROR;
 
-	    if (!(ip = resolv_lookup(cmd)))
-		resolv_query(cmd, ntp_dns_query_cb);
-	    else
-		ntp_conf(ip);
-#else
-	    return ECMD_ERR_PARSE_ERROR;
-#endif
-	}
-	else
-	    ntp_conf(&ntpaddr);
-
+	eeprom_save(ntp_server, &ntpaddr, IPADDR_LEN);
+	eeprom_update_chksum();
+	//ntp_conf(ip);
 	return ECMD_FINAL_OK;
     }
     else {
 	return ECMD_FINAL(print_ipaddr(ntp_getserver(), output, len));
     }
+}
+
+int16_t parse_cmd_ntp_eeprom(char *cmd, char *output, uint16_t len)
+{
+    uip_ipaddr_t ntpaddr;
+
+	eeprom_restore_ip(ntp_server, &ntpaddr);
+
+
+    return ECMD_FINAL(print_ipaddr(ntpaddr, output, len));
+
 }
 
 int16_t parse_cmd_ntp_query(char *cmd, char *output, uint16_t len)
@@ -112,5 +115,6 @@ int16_t parse_cmd_ntp_status(char *cmd, char *output, uint16_t len)
   block(NTP Client)
   ecmd_feature(ntp_query, "ntp query",, Query the NTP server to get an NTP update.)
   ecmd_feature(ntp_server, "ntp server", [IPADDR], Display/Set the IP address of the NTP server to use to IPADDR.)
+  ecmd_feature(ntp_eeprom, "ntp eeprom",, Display/Set the IP address of the NTP server from eeprom.)
   ecmd_feature(ntp_status, "ntp status",, Display NTP server status)
 */
