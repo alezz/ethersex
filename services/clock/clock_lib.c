@@ -355,7 +355,6 @@ clock_localtime(clock_datetime_t * d, const timestamp_t t)
   }
 }
 
-
 timestamp_t
 clock_mktime(clock_datetime_t * d, const uint8_t islocal)
 {
@@ -366,7 +365,7 @@ clock_mktime(clock_datetime_t * d, const uint8_t islocal)
   if (islocal)
   {
     t -= UTCTIME;
-    if (d->isdst < 0)
+    //if (d->isdst < 0)			/* isdst cannot be <0  (by alez@maetech.it) */
     {
       clock_tz_compute(d->year);
       d->isdst = clock_is_dst(t);
