@@ -34,6 +34,7 @@
 #include <string.h>
 #include "config.h"
 
+
 #include "protocols/uip/uip.h"
 #include "core/eeprom.h"
 
@@ -99,6 +100,11 @@ static const uint8_t xid[4] = {0xad, 0xde, 0x12, 0x23};
 static const uint8_t magic_cookie[4] = {99, 130, 83, 99};
 
 static uint8_t tick_sec;
+
+#ifdef DHCP_MANUAL
+static uint8_t dhcp_pre;
+enum {DHCP_NONET, DHCP_NET};
+#endif
 
 /*---------------------------------------------------------------------------*/
 static uint8_t *
@@ -292,31 +298,104 @@ void dhcp_set_static(void) {
 #ifdef EEPROM_SUPPORT
   /* Please Note: ip and &ip are NOT the same (cpp hell) */
   eeprom_restore_ip(ip, &ip);
+
+  // if(!check_valid_eeprom_ip(ip))
+  //   set_CONF_ETHERSEX_IP(&ip);
+
 #endif
   uip_sethostaddr(&ip);
+
+  debug_ip("Current static ip ", ip);
   
   
   /* Configure the netmask (IPv4). */
 #ifdef EEPROM_SUPPORT
   /* Please Note: ip and &ip are NOT the same (cpp hell) */
   eeprom_restore_ip(netmask, &ip);
+
+  // if(!check_valid_eeprom_ip(ip))
+  //   set_CONF_ETHERSEX_IP4_NETMASK(&ip);
+
 #endif
   uip_setnetmask(&ip);
+  debug_ip("Current static netmask ", ip);
   
   /* Configure the default gateway  */
 #ifdef EEPROM_SUPPORT
   /* Please Note: ip and &ip are NOT the same (cpp hell) */
   eeprom_restore_ip(gateway, &ip);
+
+  // if(!check_valid_eeprom_ip(ip))
+  //   set_CONF_ETHERSEX_GATEWAY(&ip);
 #endif
   uip_setdraddr(&ip);
+  debug_ip("Current static gateway ", ip);
   
   /* Remove the bootp connection */
   uip_udp_remove(uip_udp_conn);
 
 }
 
+// void debug_ip(char * msg, uip_ipaddr_t * ip)
+// {
+//   uint8_t *casted = (uint8_t *) ip;
+//   debug_printf("%s --> %u.%u.%u.%u\n", msg, casted[0],casted[1],casted[2],casted[3]);
+// }
+
+#ifdef DHCP_MANUAL
+void dhcp_init(void) {
+	dhcp_pre = DHCP_NONET;
+}
+#endif
+
 void dhcp_net_init(void) {
 
+  debug_printf("--------------------------DHCP INIT!!--------------------------\n");
+#ifdef DHCP_MANUAL
+	dhcp_pre = DHCP_NET;
+#ifdef EEPROM_SUPPORT
+	uint8_t dhcp_en;
+	eeprom_restore_char(dhcp_enabled, &dhcp_en);
+
+  if(dhcp_en)
+  {
+    debug_printf("DHCP ENABLED\n");
+    dhcp_start();
+  }
+  else
+  {
+    debug_printf("DHCP DISABLED\n");
+    if(!check_valid_network_conf())
+    {
+      debug_printf("invalid network configuration, re-enable dhcp...\n");
+        eeprom_save_char(dhcp_enabled, 1);
+	/* reset */
+	void *a;
+	char c[1];
+	c[0]='\0';
+	parse_cmd_reset(c, a, 0);
+    }
+    else
+    {
+      dhcp_set_static();
+    }  
+  }
+
+#else
+  dhcp_start();
+#endif
+		
+}
+
+void dhcp_start(void) {
+
+  debug_printf("--------------------------DHCP REQUEST!!--------------------------\n");
+
+	debug_printf("dhcp_Start(precheck)\n");
+	if (dhcp_pre!=DHCP_NET) return;
+#endif
+/* if !def(DHCP_MANUAL), then dhcp_net_init is the following */
+	debug_printf("dhcp_Start(really)\n");
 #ifdef S0BRIDGE_SUPPORT
   uint8_t ips = 0;
   eeprom_restore_int( ip_static, &ips );
@@ -379,6 +458,10 @@ void dhcp_net_main(void) {
 #endif
 
 #ifdef NTP_SUPPORT
+  uint8_t *casted = (uint8_t *) uip_udp_conn->appstate.dhcp.ntpaddr;
+  
+  debug_printf("-------------> set ntp ip from dhcp, ip: %u.%u.%u.%u\n",casted[0],casted[1],casted[2],casted[3]);
+
 	ntp_conf(uip_udp_conn->appstate.dhcp.ntpaddr);
 	//	eeprom_save(ntp_server, &uip_udp_conn->appstate.dhcp.ntpaddr, IPADDR_LEN);
 #endif
@@ -442,6 +525,7 @@ void dhcp_net_main(void) {
 /*
   -- Ethersex META --
   header(protocols/dhcp/dhcp.h)
+  ifdef(`conf_DHCP_MANUAL',`init(dhcp_init)')
   net_init(dhcp_net_init)
   timer(50, dhcp_periodic())
 

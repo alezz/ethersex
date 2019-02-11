@@ -32,6 +32,10 @@
 #ifndef __DHCPC_H__
 #define __DHCPC_H__
 
+#ifdef DHCP_MANUAL
+void dhcp_init(void);
+void dhcp_start(void);
+#endif
 void dhcp_net_init(void);
 void dhcp_net_main(void);
 void dhcp_periodic(void);

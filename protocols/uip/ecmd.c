@@ -28,6 +28,7 @@
 #include "core/debug.h"
 #include "protocols/uip/uip.h"
 #include "protocols/uip/parse.h"
+#include "protocols/dhcp/dhcp.h"
 #include "core/eeprom.h"
 
 #include "protocols/ecmd/ecmd-base.h"
@@ -124,17 +125,73 @@ int16_t parse_cmd_gw(char *cmd, char *output, uint16_t len)
     }
 }
 
+#ifdef DHCP_SUPPORT
+
+int16_t parse_cmd_dhcp(char *cmd, char *output, uint16_t len)
+{
+	uint8_t dhcp_en;
+	while (*cmd == ' ')
+		cmd++;
+	if (*cmd != '\0')
+	{
+		// 0 / 1 to disable or enable dhcp
+		dhcp_en = (*cmd == '0') ? 0 : 1 ;
+		eeprom_save_char(dhcp_enabled, dhcp_en);
+		eeprom_update_chksum();
+		if ( dhcp_en ) 
+		{
+			dhcp_start();
+			return ECMD_FINAL_OK;
+		}
+		else
+		{
+			return ECMD_FINAL_OK;
+		}
+	}
+	else
+	{
+		eeprom_restore_char(dhcp_enabled, &dhcp_en);
+		*output = dhcp_en ? '1' : '0' ;
+		return ECMD_FINAL(1);
+	}
+	
+}
+
+#else
+
+int16_t parse_cmd_dhcp(char *cmd, char *output, uint16_t len)
+{
+	uint8_t dhcp_en;
+	while (*cmd == ' ')
+		cmd++;
+	if (*cmd != '\0')
+	{
+		return ECMD_ERR_PARSE_ERROR;
+	}
+	else
+	{
+		*output = '0' ;
+		return ECMD_FINAL(1);
+	}
+	
+}
+
+#endif
+
 /*
   -- Ethersex META --
   block(Network configuration)
   ecmd_ifndef(TEENSY_SUPPORT)
     ecmd_ifdef(UIP_SUPPORT)
       ecmd_ifndef(IPV6_SUPPORT)
-	ecmd_feature(netmask, "netmask",[IP],Display/Set the network mask.)
+	    ecmd_feature(netmask, "netmask",[IP],Display/Set the network mask.)
       ecmd_endif()
 
       ecmd_feature(ip, "ip",[IP],Display/Set the IP address.)
       ecmd_feature(gw, "gw",[IP],Display/Set the address of the default router.)
+      ecmd_ifdef(DHCP_SUPPORT)
+        ecmd_feature(dhcp, "dhcp",char, display/set DHCP enabled true/false)
+      ecmd_endif()
     ecmd_endif()
   ecmd_endif()
 */

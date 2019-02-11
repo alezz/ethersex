@@ -83,6 +83,10 @@ struct eeprom_config_t
   uint8_t netmask[IPADDR_LEN];
 #endif
 
+#ifdef DHCP_SUPPORT
+  uint8_t dhcp_enabled;
+#endif
+
   uint8_t gateway[IPADDR_LEN];
 
 #ifdef DNS_SUPPORT

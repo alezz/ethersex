@@ -257,6 +257,7 @@ mainmenu_option next_comment
 		dep_bool "DHCP support" DHCP_SUPPORT "n"
 	else
 		dep_bool "DHCP support" DHCP_SUPPORT $BROADCAST_SUPPORT $ENC28J60_SUPPORT $IPV4_SUPPORT
+		dep_bool "DHCP manual start" DHCP_MANUAL $DHCP_SUPPORT
 	fi
 
 	comment "Tunneling protocols"

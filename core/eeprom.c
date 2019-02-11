@@ -30,6 +30,8 @@
 #include "config.h"
 #include "core/eeprom.h"
 
+#include "protocols/uip/parse.h"
+
 
 #ifdef CRC_SUPPORT
 uint8_t
@@ -102,6 +104,11 @@ eeprom_init (void)
   set_CONF_ETHERSEX_IP4_NETMASK (&ip);
   eeprom_save (netmask, &ip, IPADDR_LEN);
 #endif
+
+#ifdef DHCP_SUPPORT
+  eeprom_save_char (dhcp_enabled, 1);
+#endif
+
 #endif
 
 #ifdef DNS_SUPPORT
@@ -180,8 +187,42 @@ eeprom_init (void)
   };
   eeprom_save (tanklevel_params, &tanklevel_temp, sizeof(tanklevel_params_t));
 #endif
+
   eeprom_update_chksum ();
 }
 
 
+uint8_t check_valid_eeprom_ip(uip_ipaddr_t * ip)
+{
+    uint8_t *casted = (uint8_t *) ip;
+    uint16_t diff = 0;
+
+    for(uint8_t i = 0; i < 4; i++){
+        diff += 255 - casted[i];
+    }
+
+    return diff;
+}
+
+
+uint8_t check_valid_network_conf()
+{
+  uip_ipaddr_t ip;
+
+  eeprom_restore_ip(ip, &ip);
+  if(!check_valid_eeprom_ip(ip))
+    return 0;
+
+  eeprom_restore_ip(netmask, &ip);
+  if(!check_valid_eeprom_ip(ip))
+    return 0;
+
+  eeprom_restore_ip(gateway, &ip);
+  if(!check_valid_eeprom_ip(ip))
+    return 0;
+
+  return 1;
+}
+
 #endif /* EEPROM_SUPPORT */
+
