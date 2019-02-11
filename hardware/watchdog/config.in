@@ -1,0 +1,4 @@
+dep_bool "External watchdog chip support" EXTERNAL_WATCHDOG_SUPPORT
+if [ x"$EXTERNAL_WATCHDOG_SUPPORT" = x"y" ]; then
+	int "external watchdog pulse ton/toff ticks" EXTERNAL_WATCHDOG_TICKS 5
+fi

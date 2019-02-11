@@ -1,0 +1,22 @@
+dep_bool_menu "Matrix Buttons Input" MATRIX_BUTTONS_INPUT_SUPPORT $ARCH_AVR
+if [ "$MATRIX_BUTTONS_INPUT_SUPPORT" = "y" ]; then
+	comment "I/O Pin configuration"
+	dep_bool "Use internal pullups" CONF_MATRIX_BUTTONS_USE_PULLUPS $MATRIX_BUTTONS_INPUT_SUPPORT
+	choice "Button active level"     \
+    	"HIGH CONF_MATRIX_BUTTONS_SCAN_LEVEL_HIGH \
+	 	 LOW CONF_MATRIX_BUTTONS_SCAN_LEVEL_LOW"  \
+        'LOW'
+	if [ "$CONF_MATRIX_BUTTONS_SCAN_LEVEL_HIGH" = "y" ]; then
+      define_int CONF_MATRIX_BUTTONS_LEVEL 1
+    else
+      define_int CONF_MATRIX_BUTTONS_LEVEL 2
+    fi
+
+	comment  "Timing parameters"
+	int "Debounce delay (x * 4 * 20 ms)" CONF_MATRIX_BUTTONS_DEBOUNCE_DELAY 1
+	int "Longpress delay (x * 4 * 20 ms)" CONF_MATRIX_BUTTONS_LONGPRESS_DELAY 25
+	
+	comment  "Debugging Flags"
+	dep_bool "Matrix Button input Debug" DEBUG_MATRIX_BUTTONS $DEBUG $MATRIX_BUTTONS_INPUT_SUPPORT
+fi	
+endmenu

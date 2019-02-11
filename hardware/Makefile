@@ -12,6 +12,7 @@ SUBSUBDIRS += hardware/i2c/slave
 SUBSUBDIRS += hardware/input
 SUBSUBDIRS += hardware/input/ps2
 SUBSUBDIRS += hardware/input/buttons
+SUBSUBDIRS += hardware/input/matrixbuttons
 SUBSUBDIRS += hardware/io_expander
 SUBSUBDIRS += hardware/ir/rc5
 SUBSUBDIRS += hardware/ir/irmp
@@ -36,7 +37,9 @@ SUBSUBDIRS += hardware/zacwire
 SUBSUBDIRS += hardware/ultrasonic
 SUBSUBDIRS += hardware/serial_ram/23k256
 SUBSUBDIRS += hardware/hbridge
-SUBSUBDIRS += hardware/rfid/inout
+SUBSUBDIRS += hardware/buzzer
+SUBSUBDIRS += hardware/watchdog
+SUBSUBDIRS += hardware/input/badge
 
 # generic fluff
 include $(TOPDIR)/scripts/rules.mk

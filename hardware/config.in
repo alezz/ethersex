@@ -24,6 +24,10 @@ source hardware/onewire/config.in
 source hardware/input/config.in
 source hardware/input/ps2/config.in
 source hardware/input/buttons/config.in
+source hardware/input/matrixbuttons/config.in
+source hardware/buzzer/config.in
+source hardware/watchdog/config.in
+source hardware/input/badge/config.in
 
 mainmenu_option next_comment
 
@@ -37,5 +41,3 @@ endmenu
 
 source hardware/ultrasonic/config.in
 source hardware/hbridge/config.in
-
-source hardware/rfid/config.in

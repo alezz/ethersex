@@ -1,0 +1,3 @@
+
+dep_bool "Buzzer support" BUZZER_SUPPORT
+
